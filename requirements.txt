@@ -1,0 +1,25 @@
+# === Kids Story Generator - Windows / Python 3.13 + GPU PyTorch 2.8 ===
+# PyTorch and Torchvision with CUDA 12.4
+torch==2.6.0+cu124 --index-url https://download.pytorch.org/whl/cu124
+torchvision==0.21.0+cu124 --index-url https://download.pytorch.org/whl/cu124
+
+# Dash UI
+dash==2.16.1
+dash-bootstrap-components==1.5.0
+plotly>=5.20.0
+
+# Image and core libraries
+Pillow>=10.3.0
+requests>=2.32.3
+numpy>=1.26.4
+
+# AI models / pipelines
+diffusers==0.29.0
+transformers>=4.41.0
+accelerate>=0.29.0
+sentencepiece
+safetensors
+
+# PDF export and Ollama
+reportlab==4.2.0
+ollama
