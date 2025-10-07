@@ -7,6 +7,7 @@ def generate_story_from_llama3(name, age, moral, scenes, length):
         f"The story should teach about {moral or 'kindness'} and have {scenes} clear scenes. "
         f"Output JSON with keys: 'scenes': [{{'title':..., 'text':..., 'background':...}}]."
     )
+    print("Llama3 prompt:", system_prompt)
 
     try:
         resp = requests.post(

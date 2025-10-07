@@ -107,7 +107,7 @@ app.layout = dbc.Container([
 def generate_story_callback(n_clicks, name, age, gender, moral, scenes, length, photo):
     if not n_clicks: raise PreventUpdate
     if not name: return "Please enter a name!", []
-
+    print(f"Generating story for {name}, age: {age}")
     story_text, image_data = create_story_and_images(name, age, gender, moral, scenes, length, photo)
     image_divs = [
         html.Img(src=i["src"], style={'width': '80%', 'borderRadius': '10px', 'marginBottom': '10px'})
