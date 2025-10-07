@@ -1,10 +1,11 @@
 from story_generator import generate_story_from_llama3
 from image_generator import generate_scene_image
-from utils import display_image
+from utils import display_image, prepare_output_folder
 from PIL import Image
 import io, base64
 
 def create_story_and_images(name, age, gender, moral, scenes_count, length, photo_contents=None):
+    prepare_output_folder()
     story_scenes = generate_story_from_llama3(name, age, moral, scenes_count, length)
     story_text = ""
     image_divs = []
