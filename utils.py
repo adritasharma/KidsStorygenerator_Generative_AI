@@ -1,10 +1,12 @@
 import os
+import io
 import base64
 import shutil
 from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+import textwrap
 
 outputs_folder = "outputs"
 if os.path.exists(outputs_folder):
@@ -28,29 +30,41 @@ def save_uploaded_image(contents):
     img = img.resize((256, 256))
     return img
 
+
 def export_story_to_pdf(story_text, scene_count, output_path="outputs/storybook.pdf"):
     """Export story text and scene images to a PDF."""
     c = canvas.Canvas(output_path, pagesize=A4)
     width, height = A4
 
-    y = height - 50
+    margin = 40
+    max_width = width - 2 * margin
+    line_height = 16
     c.setFont("Helvetica", 12)
-    for line in story_text.split("\n"):
-        c.drawString(40, y, line[:120])
-        y -= 16
-        if y < 100:
-            c.showPage()
-            y = height - 50
-            c.setFont("Helvetica", 12)
 
+    y = height - 50
+
+    # Wrap and draw story text
+    for paragraph in story_text.split("\n"):
+        lines = textwrap.wrap(paragraph, width=80)  # Wrap text to 80 chars
+        for line in lines:
+            if y < 50:  # Start new page if bottom reached
+                c.showPage()
+                y = height - 50
+                c.setFont("Helvetica", 12)
+            c.drawString(margin, y, line)
+            y -= line_height
+
+    # Add images for each scene
     for i in range(scene_count):
         img_path = f"outputs/scene_{i+1}.png"
         if os.path.exists(img_path):
             c.showPage()
             img = ImageReader(img_path)
-            c.drawImage(img, 50, 150, width=500, preserveAspectRatio=True, mask='auto')
+            # Fit image width inside page with margin
+            img_width = width - 2 * margin
+            c.drawImage(img, margin, 150, width=img_width, preserveAspectRatio=True, mask='auto')
             c.setFont("Helvetica-Bold", 14)
-            c.drawString(50, 100, f"Scene {i+1}")
+            c.drawString(margin, 100, f"Scene {i+1}")
 
     c.save()
     return f"✅ Storybook exported to {output_path}!"
