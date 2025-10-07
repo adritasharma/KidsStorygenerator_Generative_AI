@@ -77,7 +77,7 @@ app.layout = dbc.Container([
 
         dbc.Col([
             dbc.Card([
-                html.Div(id="pdf_status", style={'color': 'green', 'marginTop': '10px'}),
+                html.Div(id="pdf_status", style={'color': 'green', 'marginTop': '10px', 'marginBottom': '10px'}),
                 dbc.CardHeader("Generated Storybook", className="bg-info text-white fw-bold"),
                 dbc.CardBody([
                     html.Div(id="story_output",
