@@ -32,7 +32,6 @@ def generate_scene_image(scene_desc, age, gender, character_image=None, scene_in
         prompt = (
             f"{scene_desc}, {age}-year-old {gender} child, cartoon style, storybook illustration, light pastel colors"
         )
-    print("✅ Prompt ready.")
 
     print("🌀 Starting Stable Diffusion generation...")
     final_image = sd_model(
@@ -41,10 +40,8 @@ def generate_scene_image(scene_desc, age, gender, character_image=None, scene_in
     ).images[0]
     print("✅ Image generation complete.")
 
-    print("🖼️ Converting and saving image...")
     final_image = final_image.convert("RGB")
     final_image.save(img_path)
-    print(f"✅ Image saved at: {img_path}")
 
     print(f"🎉 Scene {scene_index} generation completed successfully!\n")
 
