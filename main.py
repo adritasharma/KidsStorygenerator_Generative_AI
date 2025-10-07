@@ -10,17 +10,15 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from PIL import Image
 
-from transformers import CLIPTextModel
-
 # --------------------- Config ---------------------
 os.makedirs("outputs", exist_ok=True)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Load Stable Diffusion (small checkpoint)
+# Load Stable Diffusion
 print("Loading Stable Diffusion model...")
 sd_model = StableDiffusionPipeline.from_pretrained(
     "runwayml/stable-diffusion-v1-5",
-    dtype=torch.float16 if device == "cuda" else torch.float32
+    torch_dtype=torch.float16 if device == "cuda" else torch.float32
 ).to(device)
 
 # --------------------- Dash Setup ---------------------
@@ -31,30 +29,43 @@ app = dash.Dash(
 )
 app.title = "Kids Story Creator"
 
+
+# Helper to display image in Dash
 def display_image(path):
-    """Helper to display generated image"""
     if not os.path.exists(path):
         return ""
     encoded = base64.b64encode(open(path, "rb").read()).decode()
     return f"data:image/png;base64,{encoded}"
 
+
 # --------------------- Layout ---------------------
 app.layout = dbc.Container([
     dbc.Row([
-        dbc.Col(html.H2("🧒 Kids Story Creator", 
+        dbc.Col(html.H2("🧒 Kids Story Creator",
                         style={'textAlign': 'center', 'color': '#FF6F61', 'fontFamily': 'Comic Sans MS'}),
                 width=12)
     ], className="mb-4"),
 
     dbc.Row([
-        # ---------- Input Panel ----------
         dbc.Col([
             dbc.Card([
                 dbc.CardHeader("Story Inputs", className="bg-warning text-dark fw-bold"),
                 dbc.CardBody([
                     dbc.Input(id="kid_name", placeholder="Enter child's name", type="text", className="mb-2"),
+
                     dbc.Label("Select Age:", className="fw-bold"),
-                    dcc.Slider(3, 12, 1, value=6, marks={i: str(i) for i in range(3, 13)}, id="age_slider", className="mb-3"),
+                    dcc.Slider(2, 12, 1, value=6, marks={i: str(i) for i in range(2, 13)}, id="age_slider",
+                               className="mb-3"),
+
+                    dbc.Label("Select Gender:", className="fw-bold"),
+                    dbc.RadioItems(
+                        options=[{"label": "Girl", "value": "girl"},
+                                 {"label": "Boy", "value": "boy"}],
+                        value="girl",
+                        id="gender_select",
+                        inline=True,
+                        className="mb-3"
+                    ),
 
                     dbc.Label("Story Moral or Theme:", className="fw-bold"),
                     dbc.Textarea(id="story_moral", placeholder="e.g. Honesty, Friendship, Courage", className="mb-3"),
@@ -73,15 +84,14 @@ app.layout = dbc.Container([
                     html.Br(),
 
                     dbc.Label("Number of Scenes:", className="fw-bold"),
-                    dcc.Slider(1, 5, 1, value=1, marks={i: str(i) for i in range(1, 6)}, id="scene_slider", className="mb-4"),
+                    dcc.Slider(1, 5, 1, value=1, marks={i: str(i) for i in range(1, 6)}, id="scene_slider",
+                               className="mb-4"),
 
                     dbc.Label("Story Length:", className="fw-bold"),
                     dbc.RadioItems(
-                        options=[
-                            {"label": "Short", "value": "short"},
-                            {"label": "Medium", "value": "medium"},
-                            {"label": "Long", "value": "long"}
-                        ],
+                        options=[{"label": "Short", "value": "short"},
+                                 {"label": "Medium", "value": "medium"},
+                                 {"label": "Long", "value": "long"}],
                         value="medium",
                         id="story_length",
                         inline=True,
@@ -94,12 +104,11 @@ app.layout = dbc.Container([
             ])
         ], width=4),
 
-        # ---------- Output Panel ----------
         dbc.Col([
             dbc.Card([
                 dbc.CardHeader("Generated Storybook", className="bg-info text-white fw-bold"),
                 dbc.CardBody([
-                    html.Div(id="story_output", 
+                    html.Div(id="story_output",
                              style={'whiteSpace': 'pre-wrap', 'fontFamily': 'Comic Sans MS', 'fontSize': '16px'}),
                     html.Hr(),
                     html.Div(id="images_output"),
@@ -130,14 +139,13 @@ def generate_story_from_llama3(name, age, moral, scenes, length):
         text = resp.json().get("response", "")
     except requests.exceptions.RequestException as e:
         print("Ollama Llama3 API request failed", e)
-    
-    # try parsing story structure
+        text = ""
+
+    # Parse story structure
     try:
-        story_json = json.loads(text[text.find("{"):text.rfind("}")+1])
+        story_json = json.loads(text[text.find("{"):text.rfind("}") + 1])
         return story_json.get("scenes", [])
     except Exception:
-        print(f"parsing story structure failed: {text}")
-        # fallback: naive split if LLM returned plain text
         scenes_split = text.split("Scene")
         scenes_list = []
         for i, chunk in enumerate(scenes_split[1:], start=1):
@@ -145,19 +153,20 @@ def generate_story_from_llama3(name, age, moral, scenes, length):
         return scenes_list
 
 
-# --------------------- Callbacks ---------------------
+# --------------------- Generate Story Callback ---------------------
 @app.callback(
     [Output("story_output", "children"),
      Output("images_output", "children")],
     Input("generate_btn", "n_clicks"),
     [State("kid_name", "value"),
      State("age_slider", "value"),
+     State("gender_select", "value"),
      State("story_moral", "value"),
      State("scene_slider", "value"),
      State("story_length", "value"),
      State("upload_photo", "contents")]
 )
-def generate_story(n_clicks, name, age, moral, scenes, length, photo):
+def generate_story(n_clicks, name, age, gender, moral, scenes, length, photo):
     if not n_clicks:
         raise PreventUpdate
 
@@ -165,30 +174,54 @@ def generate_story(n_clicks, name, age, moral, scenes, length, photo):
         return "Please enter a name!", []
 
     story_scenes = generate_story_from_llama3(name, age, moral, scenes, length)
-
-    print(story_scenes)
-
     if not story_scenes:
         return "Story generation failed. Try again.", []
 
     story_text = ""
     image_divs = []
 
+    # Prepare character image
+    if photo:
+        header, encoded = photo.split(",", 1)
+        img_bytes = base64.b64decode(encoded)
+        character_image = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+        character_image = character_image.resize((256, 256))
+    else:
+        character_image = None
+
     for i, sc in enumerate(story_scenes):
-        title = sc.get("title", f"Scene {i+1}")
+        title = sc.get("title", f"Scene {i + 1}")
         text = sc.get("text", "")
-        bg_prompt = sc.get("background", f"cartoon scene for a children's story about {moral}")
-        
+        scene_desc = sc.get("background", "cartoon storybook scene, light pastel colors, soft, calm")
+
         story_text += f"\n🧩 {title}\n{text}\n"
 
-        # --- Image Generation ---
-        img_path = f"outputs/scene_{i+1}.png"
+        img_path = f"outputs/scene_{i + 1}.png"
         if not os.path.exists(img_path):
-            image = sd_model(
-                prompt=f"{bg_prompt}, colorful, cartoon, storybook illustration for kids",
-                guidance_scale=7.0
-            ).images[0]
-            image.save(img_path)
+
+            if character_image:
+                prompt = (
+                    f"{scene_desc}, include a {age}-year-old {gender} child resembling uploaded photo, "
+                    "cartoon style, storybook illustration, light pastel colors, "
+                    "character interacting naturally with scene, full body, natural pose"
+                )
+
+                final_image = sd_model(
+                    prompt=prompt,
+                    init_image=character_image,
+                    strength=0.6,
+                    guidance_scale=7.5
+                ).images[0]
+            else:
+                prompt = (
+                    f"{scene_desc}, {age}-year-old {gender} child, cartoon style, storybook illustration, light pastel colors"
+                )
+                final_image = sd_model(
+                    prompt=prompt,
+                    guidance_scale=7.5
+                ).images[0]
+
+            final_image.save(img_path)
 
         img_src = display_image(img_path)
         image_divs.append(html.Img(src=img_src, style={
@@ -213,7 +246,6 @@ def export_pdf(n_clicks, story_text, scene_count):
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
 
-    # Write story text
     y = height - 50
     c.setFont("Helvetica", 12)
     for line in story_text.split("\n"):
@@ -224,18 +256,18 @@ def export_pdf(n_clicks, story_text, scene_count):
             y = height - 50
             c.setFont("Helvetica", 12)
 
-    # Add images per scene
     for i in range(scene_count):
-        img_path = f"outputs/scene_{i+1}.png"
+        img_path = f"outputs/scene_{i + 1}.png"
         if os.path.exists(img_path):
             c.showPage()
             img = ImageReader(img_path)
             c.drawImage(img, 50, 150, width=500, preserveAspectRatio=True, mask='auto')
             c.setFont("Helvetica-Bold", 14)
-            c.drawString(50, 100, f"Scene {i+1}")
+            c.drawString(50, 100, f"Scene {i + 1}")
 
     c.save()
     return "✅ Storybook exported to outputs/storybook.pdf!"
+
 
 # --------------------- Run ---------------------
 if __name__ == "__main__":
