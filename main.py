@@ -120,18 +120,23 @@ def generate_story_from_llama3(name, age, moral, scenes, length):
         f"Output JSON with keys: 'scenes': [{{'title':..., 'text':..., 'background':...}}]."
     )
 
-    resp = requests.post(
-        "http://localhost:11434/api/generate",
-        json={"model": "llama3", "prompt": system_prompt, "stream": False},
-        timeout=300
-    )
-    text = resp.json().get("response", "")
+    print(f"Generating story... prompt: {system_prompt}")
+    try:
+        resp = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": "llama3", "prompt": system_prompt, "stream": False},
+            timeout=300
+        )
+        text = resp.json().get("response", "")
+    except requests.exceptions.RequestException as e:
+        print("Ollama Llama3 API request failed", e)
     
     # try parsing story structure
     try:
         story_json = json.loads(text[text.find("{"):text.rfind("}")+1])
         return story_json.get("scenes", [])
     except Exception:
+        print(f"parsing story structure failed: {text}")
         # fallback: naive split if LLM returned plain text
         scenes_split = text.split("Scene")
         scenes_list = []
@@ -160,6 +165,8 @@ def generate_story(n_clicks, name, age, moral, scenes, length, photo):
         return "Please enter a name!", []
 
     story_scenes = generate_story_from_llama3(name, age, moral, scenes, length)
+
+    print(story_scenes)
 
     if not story_scenes:
         return "Story generation failed. Try again.", []
