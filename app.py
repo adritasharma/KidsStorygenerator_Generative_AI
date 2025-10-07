@@ -13,7 +13,7 @@ app.title = "Kids Story Creator"
 app.layout = dbc.Container([
     dbc.Row([
         dbc.Col(html.H2("🧒 Kids Story Creator",
-                        style={'textAlign': 'center', 'color': '#FF6F61', 'fontFamily': 'Comic Sans MS'}),
+                        style={'textAlign': 'center', 'color': '#FF6F61', 'fontFamily': 'Comic Sans MS', 'marginTop': '20px'}),
                 width=12)
     ], className="mb-4"),
 
@@ -77,13 +77,13 @@ app.layout = dbc.Container([
 
         dbc.Col([
             dbc.Card([
+                html.Div(id="pdf_status", style={'color': 'green', 'marginTop': '10px'}),
                 dbc.CardHeader("Generated Storybook", className="bg-info text-white fw-bold"),
                 dbc.CardBody([
                     html.Div(id="story_output",
                              style={'whiteSpace': 'pre-wrap', 'fontFamily': 'Comic Sans MS', 'fontSize': '16px'}),
                     html.Hr(),
                     html.Div(id="images_output", style={'textAlign': 'center'}),
-                    html.Div(id="pdf_status", style={'color': 'green', 'marginTop': '10px'})
                 ])
             ])
         ], width=8)

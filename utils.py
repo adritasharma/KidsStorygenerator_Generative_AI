@@ -1,11 +1,15 @@
 import os
 import base64
+import shutil
 from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
-os.makedirs("outputs", exist_ok=True)
+outputs_folder = "outputs"
+if os.path.exists(outputs_folder):
+    shutil.rmtree(outputs_folder)
+os.makedirs(outputs_folder, exist_ok=True)
 
 def display_image(path):
     """Convert image to base64 for Dash display."""
