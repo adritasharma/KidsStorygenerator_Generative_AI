@@ -59,6 +59,22 @@ def save_uploaded_image(contents):
     return img
 
 
+def add_image_page(c, img_path, title, width, height, margin):
+    """
+    Adds a single image page to the PDF with a title banner.
+    """
+    if os.path.exists(img_path):
+        c.showPage()
+        c.setFillColor(colors.orange)
+        c.rect(0, height - 70, width, 40, fill=True, stroke=False)
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica-Bold", 18)
+        c.drawCentredString(width / 2, height - 55, title)
+
+        img = ImageReader(img_path)
+        img_width = width - 2 * margin
+        c.drawImage(img, margin, 150, width=img_width, preserveAspectRatio=True, mask='auto')
+
 def export_story_to_pdf(story_text, scene_count, output_path="outputs/storybook.pdf"):
     """Export story text and scene images to a colorful kids-friendly PDF."""
     c = canvas.Canvas(output_path, pagesize=A4)
@@ -117,19 +133,13 @@ def export_story_to_pdf(story_text, scene_count, output_path="outputs/storybook.
     y -= 30
 
     # Add scene images
-    for i in range(scene_count):
-        img_path = f"outputs/scene_{i+1}.png"
-        if os.path.exists(img_path):
-            c.showPage()
-            c.setFillColor(colors.orange)
-            c.rect(0, height - 70, width, 40, fill=True, stroke=False)
-            c.setFillColor(colors.white)
-            c.setFont("Helvetica-Bold", 18)
-            c.drawCentredString(width / 2, height - 55, f"Scene {i + 1}")
+    # Add initial character image
+    add_image_page(c, "character_scene.png", "Character Introduction", width, height, margin)
 
-            img = ImageReader(img_path)
-            img_width = width - 2 * margin
-            c.drawImage(img, margin, 150, width=img_width, preserveAspectRatio=True, mask='auto')
+    # Add scene images
+    for i in range(scene_count):
+        scene_img_path = f"outputs/scene_{i+1}.png"
+        add_image_page(c, scene_img_path, f"Scene {i + 1}", width, height, margin)
 
     c.save()
     return f"✅ Storybook exported to {output_path}!"
