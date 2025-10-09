@@ -19,9 +19,9 @@ def create_story_and_images(name, age, gender, moral, scenes_count, length, phot
     else:
         character_image = None
 
-    img_path = generate_scene_with_character(story_scenes[0], age, gender, character_image)
-    img_src = display_image(img_path)
-    image_divs.append({"src": img_src, "title": "Character Scene"})    
+    # img_path = generate_scene_with_character(story_scenes[0], age, gender, character_image)
+    # img_src = display_image(img_path)
+    # image_divs.append({"src": img_src, "title": "Character Scene"})    
 
     for i, sc in enumerate(story_scenes):
         title = sc.get("title", f"Scene {i+1}")

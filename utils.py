@@ -17,28 +17,34 @@ from datetime import datetime
 def prepare_output_folder(base_folder="outputs"):
     """
     Ensures the output folder is ready for new files.
-    If old files exist, moves them into a timestamped subfolder.
+    Moves only existing files into a timestamped archive subfolder.
+    Keeps existing archive folders as they are.
     """
     # Create base folder if not exists
     os.makedirs(base_folder, exist_ok=True)
 
-    # If the folder is not empty, archive its contents
-    if os.listdir(base_folder):
+    # Check for any files to move
+    items = os.listdir(base_folder)
+    files_to_move = [
+        item for item in items 
+        if os.path.isfile(os.path.join(base_folder, item))
+    ]
+
+    # If there are files, move them to archive
+    if files_to_move:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         archive_subfolder = os.path.join(base_folder, f"old_{timestamp}")
         os.makedirs(archive_subfolder, exist_ok=True)
 
-        # Move existing files/folders to archive subfolder
-        for item in os.listdir(base_folder):
+        # Move only files, skip folders
+        for item in files_to_move:
             src_path = os.path.join(base_folder, item)
             dst_path = os.path.join(archive_subfolder, item)
-            if src_path != archive_subfolder:  # avoid recursive move
-                shutil.move(src_path, dst_path)
+            shutil.move(src_path, dst_path)
 
         print(f"📦 Archived old files to: {archive_subfolder}")
 
     print(f"✅ Output folder ready: {base_folder}")
-
     return base_folder
 
 def display_image(path):
